@@ -12,16 +12,6 @@ A Python command-line script (sentiment_analyzer.py) for processing local files.
 
 An interactive web application (index.html) that runs the same logic in the browser.
 
-Group Members
-
-Buenviaje, Brian Vincent Alfred
-
-Ibanez, Luis
-
-Gonzaga, Lawrence
-
-Ramirez, Nathan Andrey
-
 Core Concept
 
 The sentiment of a comment is determined by:
