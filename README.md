@@ -32,15 +32,6 @@ If d is directionally closer to s_neg, the comment is "Negative".
 
 If it's in the middle (within a NEUTRALITY_THRESHOLD), it's "Neutral".
 
-File Structure
-
-/
-├── sentiment_analyzer.py   # The main Python script (for terminal use)
-├── index.html              # The interactive web application (for browser use)
-├── comments.csv            # Sample CSV file with user comments
-├── mock_embeddings.txt     # A small, sample embedding file for testing
-└── README.md               # This file
-
 
 Part 1: How to Run the Python Script
 
