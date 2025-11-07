@@ -1,0 +1,12 @@
+Website_ID,User_Comment,Sentiment,Sim_Positive,Sim_Negative
+Site_A,"This is a great website, I love it!",Positive,0.9124890916445514,-0.9108473033882374
+Site_A,A terrible experience. Just awful.,Negative,-0.7797148681873652,0.7884536195381735
+Site_A,"The site is okay, but the support is poor.",Positive,0.30493094593020065,-0.2866580246547093
+Site_A,I am happy with this.,Positive,0.9186831354881784,-0.9179451757161868
+Site_A,,Neutral,0.0,0.0
+Site_A,"This is bad, bad, bad.",Negative,-0.9935545256795599,0.9930279812769925
+Site_A,The website is bad,Negative,-0.15061007990386657,0.17315575550095402
+Site_A,bad bad bad bad,Negative,-0.9955576643321459,0.9936931374319294
+Site_A,good,Positive,0.9955576643321459,-0.9936931374319294
+Site_A,good good,Positive,0.9955576643321459,-0.9936931374319294
+Site_A,bad bad bad,Negative,-0.9955576643321459,0.9936931374319294

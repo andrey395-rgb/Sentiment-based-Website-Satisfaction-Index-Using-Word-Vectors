@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentiment Analyzer</title>
+    <!-- 1. Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* 2. Set default font to Inter */
+      body {
+        font-family: "Inter", sans-serif;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center py-10"
+  >
+    <main class="w-full max-w-5xl mx-auto p-4">
+      <h1 class="text-3xl font-bold text-center text-gray-900 mb-8">
+        Sentiment-based Website Satisfaction Index
+      </h1>
+      <p class="text-center text-gray-600 mb-10">
+        This is a web-based demo of the vector-based sentiment analysis model.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Card 1: Single Comment Analyzer -->
+        <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col">
+          <h2 class="text-2xl font-semibold mb-4">1. Analyze a New Comment</h2>
+
+          <div class="flex-grow">
+            <label
+              for="single_comment_text"
+              class="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Enter a comment:
+            </label>
+            <textarea
+              id="single_comment_text"
+              rows="4"
+              class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition"
+              placeholder="e.g., 'This is a great site!'"
+            ></textarea>
+          </div>
+
+          <button
+            id="analyze_single_btn"
+            class="mt-4 w-full bg-blue-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-blue-700 transition-colors"
+          >
+            Analyze Sentiment
+          </button>
+
+          <!-- Result area for Single Comment -->
+          <div id="single_result_area" class="mt-4 p-4 rounded-lg hidden">
+            <h3 class="font-bold text-lg mb-2">Analysis Result:</h3>
+            <p
+              id="single_result_sentiment"
+              class="text-xl font-semibold mb-2"
+            ></p>
+            <div class="text-sm">
+              <p id="single_result_pos_score"></p>
+              <p id="single_result_neg_score"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Full Website Satisfaction Index (WSI) -->
+        <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col">
+          <h2 class="text-2xl font-semibold mb-4">
+            2. Calculate Full Site WSI
+          </h2>
+
+          <div class="flex-grow">
+            <label
+              for="wsi_site_id"
+              class="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Select a Website ID to analyze:
+            </label>
+            <select
+              id="wsi_site_id"
+              class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition"
+            >
+              <option value="Site_A">Site_A</option>
+              <option value="Site_B">Site_B</option>
+            </select>
+          </div>
+
+          <button
+            id="analyze_wsi_btn"
+            class="mt-4 w-full bg-indigo-600 text-white p-3 rounded-lg font-semibold shadow hover:bg-indigo-700 transition-colors"
+          >
+            Calculate WSI
+          </button>
+
+          <!-- Result area for WSI -->
+          <div
+            id="wsi_result_area"
+            class="mt-4 p-4 rounded-lg bg-gray-50 hidden"
+          >
+            <h3 class="font-bold text-lg mb-3">WSI Analysis Result:</h3>
+            <div class="text-center mb-3">
+              <p class="text-sm text-gray-600">Website Satisfaction Index</p>
+              <p id="wsi_result_score" class="text-4xl font-bold"></p>
+            </div>
+            <div class="space-y-2">
+              <p id="wsi_result_total" class="font-semibold"></p>
+              <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  id="wsi_progress_bar"
+                  class="h-2.5 rounded-full"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <div class="text-sm text-gray-600 space-y-1">
+                <p id="wsi_result_positive"></p>
+                <p id="wsi_result_neutral"></p>
+                <p id="wsi_result_negative"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 
+      This script contains all the logic from your sentiment_analyzer.py,
+      ported to JavaScript.
+    -->
+    <script>
+      // --- Global Constants & Data (from your files) ---
+      const NEUTRALITY_THRESHOLD = 0.1; // (tau)
+      const EMBEDDING_DIM = 5;
+
+      // Hard-coded mock_embeddings.txt
+      const EMBEDDINGS = {
+        this: [0.1, 0.2, 0.1, 0.1, 0.3],
+        is: [0.1, 0.1, 0.1, 0.2, 0.1],
+        a: [0.2, 0.1, 0.3, 0.1, 0.1],
+        great: [0.9, 0.1, 0.2, 0.1, 0.8],
+        website: [0.4, 0.5, 0.1, 0.6, 0.2],
+        i: [0.1, 0.2, 0.2, 0.1, 0.1],
+        love: [0.8, 0.1, 0.1, 0.2, 0.9],
+        it: [0.1, 0.1, 0.3, 0.1, 0.2],
+        terrible: [-0.9, -0.1, -0.2, -0.1, -0.8],
+        experience: [0.1, 0.5, 0.1, 0.8, 0.1],
+        just: [0.2, 0.2, 0.1, 0.2, 0.1],
+        awful: [-0.8, -0.1, -0.1, -0.2, -0.9],
+        the: [0.1, 0.3, 0.1, 0.1, 0.1],
+        site: [0.3, 0.6, 0.1, 0.7, 0.1],
+        okay: [0.1, 0.1, 0.5, 0.1, 0.1],
+        but: [0.0, 0.1, 0.2, 0.1, 0.0],
+        support: [0.1, 0.6, 0.1, 0.5, 0.3],
+        poor: [-0.7, -0.1, -0.3, -0.1, -0.5],
+        am: [0.1, 0.1, 0.1, 0.1, 0.1],
+        happy: [0.9, 0.2, 0.1, 0.1, 0.8],
+        with: [0.1, 0.1, 0.2, 0.1, 0.1],
+        hate: [-0.9, -0.2, -0.1, -0.1, -0.9],
+        platform: [0.2, 0.7, 0.1, 0.6, 0.1],
+        worst: [-1.0, -0.1, -0.1, -0.1, -1.0],
+        an: [0.1, 0.1, 0.2, 0.1, 0.1],
+        excellent: [0.9, 0.1, 0.1, 0.1, 0.9],
+        service: [0.1, 0.5, 0.1, 0.7, 0.2],
+        truly: [0.4, 0.1, 0.1, 0.1, 0.3],
+        best: [1.0, 0.1, 0.1, 0.1, 1.0],
+        does: [0.1, 0.4, 0.1, 0.1, 0.1],
+        job: [0.1, 0.5, 0.1, 0.4, 0.1],
+        nothing: [0.0, 0.1, 0.1, 0.1, 0.0],
+        special: [0.3, 0.2, 0.1, 0.1, 0.4],
+        what: [0.1, 0.2, 0.3, 0.1, 0.1],
+        good: [0.8, 0.1, 0.1, 0.2, 0.7],
+        awesome: [0.8, 0.2, 0.1, 0.1, 0.8],
+        bad: [-0.8, -0.1, -0.1, -0.2, -0.7],
+        sad: [-0.7, 0.1, -0.2, 0.1, -0.6],
+      };
+
+      // Hard-coded comments.csv
+      const ALL_COMMENTS = [
+        {
+          Website_ID: "Site_A",
+          User_Comment: "This is a great website, I love it!",
+        },
+        {
+          Website_ID: "Site_A",
+          User_Comment: "A terrible experience. Just awful.",
+        },
+        {
+          Website_ID: "Site_A",
+          User_Comment: "The site is okay, but the support is poor.",
+        },
+        { Website_ID: "Site_A", User_Comment: "I am happy with this." },
+        {
+          Website_ID: "Site_B",
+          User_Comment: "I hate this platform, it's the worst.",
+        },
+        {
+          Website_ID: "Site_B",
+          User_Comment: "An excellent service. Truly the best.",
+        },
+        {
+          Website_ID: "Site_B",
+          User_Comment: "It does the job. Nothing special.",
+        },
+        { Website_ID: "Site_A", User_Comment: "" },
+        {
+          Website_ID: "Site_B",
+          User_Comment: "What a good, awesome, great site.",
+        },
+        { Website_ID: "Site_A", User_Comment: "This is bad, bad, bad." },
+      ];
+
+      // --- Vector Math Utilities (JavaScript 'numpy') ---
+      const vecDot = (v1, v2) =>
+        v1.reduce((acc, val, i) => acc + val * v2[i], 0);
+      const vecNorm = (v) =>
+        Math.sqrt(v.reduce((acc, val) => acc + val * val, 0));
+      const vecAdd = (v1, v2) => v1.map((val, i) => val + v2[i]);
+      const vecDiv = (v, scalar) => v.map((val) => val / scalar);
+      const vecZeros = (dim) => Array(dim).fill(0);
+
+      // --- Ported Python Functions ---
+
+      /**
+       * Calculates the cosine similarity between two vectors.
+       * (Formula 3.2: Sim(d,s) = (d . s) / (||d|| ||s||))
+       */
+      function cosineSimilarity(v1, v2) {
+        const norm_v1 = vecNorm(v1);
+        const norm_v2 = vecNorm(v2);
+        if (norm_v1 === 0 || norm_v2 === 0) {
+          return 0.0;
+        }
+        const dotProduct = vecDot(v1, v2);
+        return dotProduct / (norm_v1 * norm_v2);
+      }
+
+      /**
+       * Calculates s_pos and s_neg by averaging seed word vectors.
+       * (As described in section 4.2)
+       */
+      function calculateReferenceVectors() {
+        const POSITIVE_SEED_WORDS = [
+          "good",
+          "great",
+          "love",
+          "excellent",
+          "best",
+          "awesome",
+          "happy",
+        ];
+        const NEGATIVE_SEED_WORDS = [
+          "bad",
+          "terrible",
+          "hate",
+          "worst",
+          "awful",
+          "poor",
+          "sad",
+        ];
+
+        function getAverageVector(words) {
+          let vectorSum = vecZeros(EMBEDDING_DIM);
+          let wordCount = 0;
+          for (const word of words) {
+            if (EMBEDDINGS[word]) {
+              vectorSum = vecAdd(vectorSum, EMBEDDINGS[word]);
+              wordCount++;
+            }
+          }
+          if (wordCount === 0) {
+            return vecZeros(EMBEDDING_DIM);
+          }
+          return vecDiv(vectorSum, wordCount);
+        }
+
+        const s_pos = getAverageVector(POSITIVE_SEED_WORDS);
+        const s_neg = getAverageVector(NEGATIVE_SEED_WORDS);
+        return [s_pos, s_neg];
+      }
+
+      /**
+       * Basic text cleaning: lowercase, remove punctuation, split into words.
+       * (As described in section 4.2)
+       */
+      function cleanText(text) {
+        if (typeof text !== "string" || !text) {
+          return [];
+        }
+        return text
+          .toLowerCase()
+          .replace(/[^\w\s]/g, "") // Remove punctuation
+          .split(/\s+/) // Split by whitespace
+          .filter((word) => word.length > 0); // Remove empty strings
+      }
+
+      /**
+       * Creates the Document Vector (d) by averaging its word vectors.
+       * (Formula 3.2: d = (1/|Words|) * sum(w_i))
+       */
+      function createDocumentVector(words) {
+        let d = vecZeros(EMBEDDING_DIM);
+        let wordCount = 0;
+        for (const word of words) {
+          if (EMBEDDINGS[word]) {
+            d = vecAdd(d, EMBEDDINGS[word]);
+            wordCount++;
+          }
+        }
+        if (wordCount > 0) {
+          d = vecDiv(d, wordCount);
+        }
+        return d;
+      }
+
+      /**
+       * Applies the final classification rule from section 3.2.
+       * Returns [label, sim_pos, sim_neg]
+       */
+      function classifySentiment(d, s_pos, s_neg, tau) {
+        if (vecNorm(d) === 0) {
+          return ["Neutral", 0.0, 0.0];
+        }
+
+        const sim_pos = cosineSimilarity(d, s_pos);
+        const sim_neg = cosineSimilarity(d, s_neg);
+
+        if (sim_pos > sim_neg + tau) {
+          return ["Positive", sim_pos, sim_neg];
+        } else if (sim_neg > sim_pos + tau) {
+          return ["Negative", sim_pos, sim_neg];
+        } else {
+          return ["Neutral", sim_pos, sim_neg];
+        }
+      }
+
+      /**
+       * Calculates the Website Satisfaction Index (WSI) from section 3.2.
+       * Returns [wsi, total_count]
+       */
+      function calculateWSI(counts) {
+        const count_pos = counts["Positive"] || 0;
+        const count_neu = counts["Neutral"] || 0;
+        const count_neg = counts["Negative"] || 0;
+
+        const count_total = count_pos + count_neu + count_neg;
+        if (count_total === 0) {
+          return [0.0, 0];
+        }
+
+        const numerator = count_pos * 1 + count_neg * -1;
+        const wsi = (numerator / count_total) * 100.0;
+        return [wsi, count_total];
+      }
+
+      // --- Main Application Logic ---
+
+      // 1. Calculate reference vectors on script load
+      const [S_POS, S_NEG] = calculateReferenceVectors();
+
+      // 2. Add Event Listeners when DOM is ready
+      document.addEventListener("DOMContentLoaded", () => {
+        // --- Handler for Single Comment Analysis ---
+        const analyzeSingleBtn = document.getElementById("analyze_single_btn");
+        const commentText = document.getElementById("single_comment_text");
+        const resultArea = document.getElementById("single_result_area");
+        const resultSentiment = document.getElementById(
+          "single_result_sentiment"
+        );
+        const resultPosScore = document.getElementById(
+          "single_result_pos_score"
+        );
+        const resultNegScore = document.getElementById(
+          "single_result_neg_score"
+        );
+
+        analyzeSingleBtn.addEventListener("click", () => {
+          const text = commentText.value;
+
+          // Run the analysis
+          const words = cleanText(text);
+          const d = createDocumentVector(words);
+          const [label, sim_pos, sim_neg] = classifySentiment(
+            d,
+            S_POS,
+            S_NEG,
+            NEUTRALITY_THRESHOLD
+          );
+
+          // Display results
+          resultSentiment.textContent = label;
+          resultPosScore.textContent = `Positive Similarity: ${sim_pos.toFixed(
+            4
+          )}`;
+          resultNegScore.textContent = `Negative Similarity: ${sim_neg.toFixed(
+            4
+          )}`;
+
+          // Remove old color classes
+          resultArea.classList.remove(
+            "bg-green-100",
+            "text-green-800",
+            "bg-red-100",
+            "text-red-800",
+            "bg-yellow-100",
+            "text-yellow-800",
+            "hidden"
+          );
+
+          // Add new color classes based on sentiment
+          if (label === "Positive") {
+            resultArea.classList.add("bg-green-100", "text-green-800");
+          } else if (label === "Negative") {
+            resultArea.classList.add("bg-red-100", "text-red-800");
+          } else {
+            resultArea.classList.add("bg-yellow-100", "text-yellow-800");
+          }
+        });
+
+        // --- Handler for Full WSI Analysis ---
+        const analyzeWsiBtn = document.getElementById("analyze_wsi_btn");
+        const wsiSiteId = document.getElementById("wsi_site_id");
+        const wsiResultArea = document.getElementById("wsi_result_area");
+        const wsiScore = document.getElementById("wsi_result_score");
+        const wsiTotal = document.getElementById("wsi_result_total");
+        const wsiPositive = document.getElementById("wsi_result_positive");
+        const wsiNeutral = document.getElementById("wsi_result_neutral");
+        const wsiNegative = document.getElementById("wsi_result_negative");
+        const wsiProgressBar = document.getElementById("wsi_progress_bar");
+
+        analyzeWsiBtn.addEventListener("click", () => {
+          const targetSite = wsiSiteId.value;
+
+          // 1. Filter comments for the target site
+          const siteComments = ALL_COMMENTS.filter(
+            (c) => c.Website_ID === targetSite
+          );
+
+          // 2. Classify each comment
+          const counts = { Positive: 0, Neutral: 0, Negative: 0 };
+          for (const comment of siteComments) {
+            const words = cleanText(comment.User_Comment);
+            const d = createDocumentVector(words);
+            const [label, _pos, _neg] = classifySentiment(
+              d,
+              S_POS,
+              S_NEG,
+              NEUTRALITY_THRESHOLD
+            );
+            counts[label]++;
+          }
+
+          // 3. Calculate WSI
+          const [wsi, total] = calculateWSI(counts);
+          const count_pos = counts["Positive"];
+          const count_neu = counts["Neutral"];
+          const count_neg = counts["Negative"];
+
+          // 4. Display WSI results
+          wsiScore.textContent = `${wsi.toFixed(2)}`;
+          wsiTotal.textContent = `Based on ${total} total comments`;
+
+          const pos_pct = total > 0 ? (count_pos / total) * 100 : 0;
+          const neu_pct = total > 0 ? (count_neu / total) * 100 : 0;
+          const neg_pct = total > 0 ? (count_neg / total) * 100 : 0;
+
+          wsiPositive.textContent = `Positive: ${count_pos} (${pos_pct.toFixed(
+            1
+          )}%)`;
+          wsiNeutral.textContent = `Neutral: ${count_neu} (${neu_pct.toFixed(
+            1
+          )}%)`;
+          wsiNegative.textContent = `Negative: ${count_neg} (${neg_pct.toFixed(
+            1
+          )}%)`;
+
+          // Update progress bar
+          // (WSI is -100 to +100, so we normalize it to 0-100 for the bar)
+          const bar_pct = (wsi + 100) / 2;
+          wsiProgressBar.style.width = `${bar_pct}%`;
+
+          // Update colors
+          wsiProgressBar.classList.remove(
+            "bg-green-600",
+            "bg-red-600",
+            "bg-yellow-600"
+          );
+          wsiScore.classList.remove(
+            "text-green-600",
+            "text-red-600",
+            "text-gray-700"
+          );
+
+          if (wsi > 20) {
+            wsiProgressBar.classList.add("bg-green-600");
+            wsiScore.classList.add("text-green-600");
+          } else if (wsi < -20) {
+            wsiProgressBar.classList.add("bg-red-600");
+            wsiScore.classList.add("text-red-600");
+          } else {
+            wsiProgressBar.classList.add("bg-yellow-600");
+            wsiScore.classList.add("text-gray-700");
+          }
+
+          wsiResultArea.classList.remove("hidden");
+        });
+      });
+    </script>
+  </body>
+</html>
