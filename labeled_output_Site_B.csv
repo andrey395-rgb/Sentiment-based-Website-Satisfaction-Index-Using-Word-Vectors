@@ -1,0 +1,6 @@
+Website_ID,User_Comment,Sentiment,Sim_Positive,Sim_Negative
+Site_B,"I hate this platform, it's the worst.",Negative,-0.7393367229638332,0.7504487609820784
+Site_B,An excellent service. Truly the best.,Positive,0.9576461591212627,-0.9502050904622176
+Site_B,It does the job. Nothing special.,Positive,0.6278895397787139,-0.6137450386274028
+Site_B,"What a good, awesome, great site.",Positive,0.9496249275140258,-0.9470875413605121
+Site_B,good good good,Positive,0.9955576643321459,-0.9936931374319294
