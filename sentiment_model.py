@@ -148,7 +148,8 @@ class SentimentModel:
 
     def get_website_analysis(self, target_site_id: str) -> Dict:
         """
-        Analyzes a site, saves a summary file, and returns a dictionary of results.
+        Analyzes a site and returns a dictionary of results,
+        including the text content for a summary file.
         """
         try:
             # FIX: Tell pandas to read empty strings as "" not NaN
@@ -164,7 +165,6 @@ class SentimentModel:
         # Filter out any rows that have an empty string for the comment.
         # This stops the blank "ghost" comment from being analyzed.
         df_site = df_site[df_site['User_Comment'] != ""]
-        # --- END FIX ---
 
         if df_site.empty:
             return {"error": f"No valid (non-blank) comments found for Website_ID '{target_site_id}'."}
@@ -183,10 +183,8 @@ class SentimentModel:
         sentiment_counts = df_site['Sentiment'].value_counts().to_dict()
         wsi, total_comments = self.calculate_wsi(sentiment_counts)
         
-        # --- NEW: Save Summary in .txt format ---
-        
-        # Change file extension to .txt
-        summary_filename = f"WSI_Summary_{target_site_id}.txt"
+        # --- MODIFICATION ---
+        # Instead of saving a file, just prepare the content
         
         # Build the new key-value string format
         summary_content = (
@@ -198,15 +196,7 @@ class SentimentModel:
             f"Negative Comments: {sentiment_counts.get('Negative', 0)}\n"
         )
         
-        try:
-            # Write the string directly to the file
-            with open(summary_filename, 'w', encoding='utf-8') as f:
-                f.write(summary_content)
-            summary_saved = True
-        except Exception as e:
-            print(f"Error saving summary file: {e}")
-            summary_saved = False
-        # --- END NEW ---
+        # --- END MODIFICATION ---
         
         # Return a structured dictionary
         return {
@@ -214,7 +204,7 @@ class SentimentModel:
             "total_comments": total_comments,
             "counts": sentiment_counts,
             "labeled_dataframe": df_site,
-            "summary_file_path": summary_filename if summary_saved else None 
+            "summary_content": summary_content  # <-- Pass the content back
         }
 
     def add_comment_to_csv(self, website_id: str, user_comment: str) -> str:

@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, filedialog # <--- IMPORT filedialog
+from tkinter import ttk, scrolledtext, messagebox, filedialog # <--- Ensure filedialog is imported
 import tkinterdnd2 as TkinterDnD 
 from sentiment_model import SentimentModel 
 import os 
@@ -348,11 +348,34 @@ class SentimentApp(TkinterDnD.Tk):
             self.analyze_status_var.set(f"Error: {results['error']}")
             return
 
-        # Show file save status
-        if results.get("summary_file_path"):
-            self.analyze_status_var.set(f"Summary saved to {results['summary_file_path']}")
+        # --- MODIFICATION ---
+        # Ask user where to save the summary file
+        
+        summary_content = results.get("summary_content")
+        if summary_content:
+            # Open a "Save As" dialog
+            file_path = filedialog.asksaveasfilename(
+                title="Save WSI Summary",
+                initialfile=f"WSI_Summary_{site_id}.txt",
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+            )
+            
+            # If the user selected a location (didn't click cancel)
+            if file_path:
+                try:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(summary_content)
+                    # Show file save status
+                    self.analyze_status_var.set(f"Summary saved to {os.path.basename(file_path)}")
+                except Exception as e:
+                    self.analyze_status_var.set(f"Error: Could not save summary file: {e}")
+            else:
+                # User clicked cancel
+                self.analyze_status_var.set("Save summary cancelled.")
         else:
-            self.analyze_status_var.set("Error: Could not save summary file.")
+            self.analyze_status_var.set("Error: Could not generate summary content.")
+        # --- END MODIFICATION ---
 
         wsi = results['wsi']
         total = results['total_comments']
