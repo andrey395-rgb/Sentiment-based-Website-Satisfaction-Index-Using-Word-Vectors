@@ -1,111 +1,178 @@
-# Sentiment-based Website Satisfaction Index Using Word Vectors
+# Sentiment-Based Website Satisfaction Index (GUI Application)
 
-## Project Overview
+## 1. Project Overview
 
-This project proposes and implements a sentiment analysis system that classifies user feedback into positive, neutral, and negative categories. It uses the mathematical framework of vector spaces and inner products to quantify user sentiment.
+This project implements a **sentiment analysis system** that classifies user feedback into **positive**, **neutral**, and **negative** categories. It uses the mathematical framework of **vector spaces** and **inner products** to quantify user sentiment.
 
-By representing textual data (user comments) as numerical vectors, the model uses cosine similarity to measure how closely a comment aligns with pre-defined "positive" and "negative" sentiment vectors. These classifications are then aggregated into a single Website Satisfaction Index (WSI), providing a clear, data-driven metric of overall user satisfaction.
+By representing textual data (user comments) as numerical vectors, the model applies **cosine similarity** to measure how closely a comment aligns with predefined sentiment directions. These results are then aggregated into a single metric called the **Website Satisfaction Index (WSI)**, providing a clear, data-driven measure of overall user satisfaction.
 
-This repository contains two main implementations of this model:
+This repository includes a **Python GUI application** built using **Tkinter** for interactive analysis and management.
+---
 
-- A Python command-line script (`sentiment_analyzer.py`) for processing local files.
-- An interactive web application (`index.html`) that runs the same logic in the browser.
+## 2. Core Concept
 
-## Core Concept
+The sentiment of each user comment is determined using the following steps:
 
-The sentiment of a comment is determined by the following process:
+1. **Vectorization**
+   Each word in a comment is converted into a high-dimensional vector using a pre-trained embedding model (e.g., *GloVe*).
 
-1.  **Vectorization**: Each word in a comment is converted into a high-dimensional vector using a pre-trained embedding model (e.g., GloVe).
-2.  **Document Vector**: The vectors for all words in a comment are averaged to create a single "document vector" (`d`) that represents the overall meaning of the comment.
-3.  **Reference Vectors**: A "positive" vector (`s_pos`) and a "negative" vector (`s_neg`) are calculated by averaging the vectors of several seed words (e.g., "good", "great" vs. "bad", "terrible").
-4.  **Cosine Similarity**: The model calculates the cosine of the angle between the document vector `d` and the two reference vectors.
-5.  **Classification**:
-    - If `d` is directionally closer to `s_pos`, the comment is **"Positive"**.
-    - If `d` is directionally closer to `s_neg`, the comment is **"Negative"**.
-    - If it's in the middle (within a `NEUTRALITY_THRESHOLD`), it's **"Neutral"**.
+2. **Document Vector**
+   The vectors of all words in a comment are averaged to create a single **document vector** `d` representing the comment’s overall meaning.
+
+3. **Reference Vectors**
+   Two reference sentiment vectors are defined:
+
+   * **Positive Vector (s_pos)** – average of seed words like *good*, *excellent*, *amazing*
+   * **Negative Vector (s_neg)** – average of seed words like *bad*, *terrible*, *awful*
+
+4. **Cosine Similarity**
+   The model computes the cosine similarity between `d` and both reference vectors.
+
+5. **Classification**
+   Based on directional closeness:
+
+   * If `d` is closer to `s_pos` → **Positive**
+   * If `d` is closer to `s_neg` → **Negative**
+   * If `d` lies between the two within a `NEUTRALITY_THRESHOLD` → **Neutral**
 
 ---
 
-## Part 1: How to Run the Python Script
+## 3. File Structure
 
-This is a command-line tool that reads the `comments.csv` file, analyzes a specific `Website_ID`, and saves a new CSV file with the results.
-
-### 1. Installation
-
-Before running the script, you need to install the `pandas` and `numpy` libraries.
-
-```bash
-pip install pandas numpy
 ```
-
-### 2. Running the Script
-
-Run the script from your terminal inside the project folder.
-
-```bash
-python sentiment_analyzer.py
+/
+├── sentiment_gui.py        # MAIN APP: GUI frontend (run this file)
+├── sentiment_model.py      # BACKEND: Core logic for sentiment and WSI
+│
+├── comments.csv            # Data file storing website comments
+├── mock_embeddings.txt     # Sample embedding file (5D vectors for testing)
+├── batch_comments.txt      # Sample batch input file for demo purposes
+│
+├── README.md               # Project documentation (this file)
+│
+└── (Deprecated Files)
+    ├── sentiment_analyzer.py   # Old command-line version
+    └── index.html              # Old web-based version
 ```
-
-The script will:
-
-- Load the `mock_embeddings.txt` and `comments.csv` files.
-- Prompt you to enter a `Website_ID` to analyze (e.g., `Site_A`).
-- Print a full analysis and WSI score to the terminal.
-- Save a new file (e.g., `labeled_output_Site_A.csv`) with the detailed results.
 
 ---
 
-## Part 2: How to Run the Web Application
+## 4. How to Run the Application
 
-This is an interactive website that runs the exact same logic entirely in your browser. It allows you to analyze new comments in real-time.
+### Step 1: Install Dependencies
 
-### 1. Start the Local Server
-
-This web app must be run from a local server. Python has one built-in. From your terminal, run this command inside the project folder:
+Install the required Python libraries:
 
 ```bash
-python -m http.server
+pip install pandas numpy tkinterdnd2
 ```
 
-You will see a message like `Serving HTTP on 0.0.0.0 port 8000...`. Leave this terminal running.
+> Note: `tkinter` is included with most Python installations by default.
 
-### 2. Access the Web App
+### Step 2: Run the Application
 
-Open your web browser (Chrome, Firefox, etc.) and go to the following address:
+Launch the GUI by running:
 
-http://localhost:8000
+```bash
+python sentiment_gui.py
+```
 
-The `index.html` file will load automatically.
-
-### 3. Using the Web App
-
-The page is split into two parts:
-
-**Step 1: Analyze a New Comment**
-
-1.  Type any comment (e.g., "this is a terrible experience").
-2.  Select which `Website_ID` it belongs to (e.g., `Site_A`).
-3.  Click **"Analyze & Add to Session"**.
-4.  You will see the sentiment analysis for that single comment.
-5.  This new comment is now temporarily added to the data for this session.
-
-**Step 2: Calculate Full Site WSI**
-
-1.  Select a `Website_ID` from the dropdown.
-2.  Click **"Calculate WSI"**.
-3.  The app will analyze all comments from the CSV for that site, plus any new comments you added from Step 1.
-4.  The WSI score, comment counts, and percentage breakdown will be displayed.
-
-> **Note**: Added comments are only stored in memory. If you reload the page, they will be gone.
+The application will load the embedding model, then open the main window automatically.
 
 ---
 
-## Note on Embeddings
+## 5. Application Features
 
-The included `mock_embeddings.txt` file is a tiny, 5-dimensional sample file used to make the project runnable without a large download.
+The GUI is divided into **four main tabs**, each with a specific purpose:
 
-For real-world accuracy, you should:
+### 🟦 Tab 1: Analyze Website
 
-1.  Download a pre-trained embedding model, such as **GloVe** (e.g., the 6B token, 100d file).
-2.  Update the `EMBEDDING_FILE` variable in `sentiment_analyzer.py` to point to your new file (e.g., `glove.6B.100d.txt`).
-3.  Update the file name in the `fetch('mock_embeddings.txt')` line in `index.html` to match.
+**Function:** Computes and displays the complete WSI analysis for a chosen website.
+
+**How to Use:**
+
+1. Select a **Website_ID** from the dropdown menu.
+2. Click **"Calculate WSI"**.
+3. The results will display:
+
+   * WSI score
+   * Sentiment counts (positive, neutral, negative)
+   * Full list of labeled comments
+4. A **“Save As…”** dialog will open, allowing you to export the summary as a `.txt` file (e.g., `WSI_Summary_Site_A.txt`).
+
+---
+
+### 🟩 Tab 2: Add New Site
+
+**Function:** Adds a new, blank website entry to `comments.csv`.
+
+**How to Use:**
+
+1. Enter the name of the new site (e.g., `Site_C`).
+2. Click **"Add New Website"**.
+3. The site will now appear in all dropdown menus.
+
+---
+
+### 🟨 Tab 3: Add Single Comment
+
+**Function:** Adds a single comment to a selected website.
+
+**How to Use:**
+
+1. Choose a **Website_ID**.
+2. Type your comment in the text box.
+3. Click **"Add Comment to CSV"** to permanently save it.
+
+---
+
+### 🟧 Tab 4: Batch Upload
+
+**Function:** Uploads multiple comments from a `.txt` file at once.
+
+**How to Use:**
+
+1. Select the **Website_ID** you want to add comments to.
+2. Choose your file via:
+
+   * **Drag and Drop:** Drop your `.txt` file (e.g., `batch_comments.txt`) onto the drop zone.
+   * **Browse:** Click **"Browse..."** to select a file manually.
+3. Click **"Submit Batch File"** to upload all comments.
+
+---
+
+## 6. Notes on Embeddings
+
+The included `mock_embeddings.txt` is a small, 5-dimensional embedding file meant for demonstration.
+For real-world accuracy and better sentiment differentiation:
+
+1. Download a **pre-trained embedding model**, such as **GloVe 6B (100d)**.
+   Example source: [https://nlp.stanford.edu/projects/glove/](https://nlp.stanford.edu/projects/glove/)
+
+2. Update the following line in `sentiment_model.py`:
+
+   ```python
+   EMBEDDING_FILE = 'glove.6B.100d.txt'
+   ```
+
+3. Restart the application after updating the file path.
+
+---
+
+## 7. Future Improvements
+
+* Integration with real-time web feedback systems
+* Advanced vector representations using transformer models (e.g., BERT)
+* Interactive dashboards for trend visualization
+* Database integration for large-scale deployment
+
+---
+
+## 8. License
+
+This project is released for academic and educational purposes.
+All contributors retain rights to their respective code and documentation.
+
+---
+
+Would you like me to format this for GitHub (e.g., add markdown tables, collapsible sections, or visual badges like “Built with Tkinter”)?
