@@ -3,24 +3,31 @@ import numpy as np
 import re
 from typing import Dict, Tuple, List
 import csv
-import os # Added to check if file exists
+import os
 
 # --- Constants ---
 EMBEDDING_FILE = 'mock_embeddings.txt'
 COMMENTS_FILE = 'comments.csv'
-NEUTRALITY_THRESHOLD = 0.1  # (tau)
+NEUTRALITY_THRESHOLD = 0.1  # Threshold (tau) for sentiment classification
 
 class SentimentModel:
     """
-    This class encapsulates all the logic from your project proposal.
-    It does not interact with the user directly (no input/print).
+    Sentiment Analysis Model using Word Vector Embeddings.
+    
+    This class implements sentiment analysis using vector space mathematics:
+    - Word embeddings represent words as vectors in a high-dimensional space
+    - Reference vectors represent positive and negative sentiment directions
+    - Document vectors are created via linear combination of word vectors
+    - Cosine similarity measures semantic alignment between vectors
     """
     def __init__(self):
         print("--- Sentiment-based Website Satisfaction Index ---")
         print("Loading model... This may take a moment.")
         
-        # Load embeddings and calculate reference vectors once on startup
+        # Load word embeddings (vectors in embedding_dim-dimensional space)
         self.embeddings, self.embedding_dim = self._load_embeddings(EMBEDDING_FILE)
+        
+        # Calculate reference vectors for positive and negative sentiment
         self.s_pos, self.s_neg = self._calculate_reference_vectors()
         
         print(f"Model loaded. Embedding dimension: {self.embedding_dim}")
@@ -28,6 +35,18 @@ class SentimentModel:
         print(f"Similarity between s_pos and s_neg: {sim:.4f}")
 
     def _load_embeddings(self, file_path: str) -> Tuple[Dict[str, np.ndarray], int]:
+        """
+        Loads word embeddings from a text file.
+        
+        Mathematical Concept: VECTORS AND VECTOR SPACES
+        Each word is represented as a vector in an n-dimensional vector space.
+        The embedding_dim defines the dimensionality of this space (typically 50-300).
+        Each dimension captures a semantic feature of the word.
+        
+        Returns:
+            Dictionary mapping words to their vector representations (numpy arrays)
+            The dimensionality of the embedding space
+        """
         embeddings_index = {}
         embedding_dim = 0
         try:
@@ -44,7 +63,7 @@ class SentimentModel:
                         if embedding_dim == 0:
                             embedding_dim = len(values)
                     except ValueError:
-                        continue # Skip non-numeric lines
+                        continue
 
             if embedding_dim == 0:
                 raise ValueError("No valid embedding vectors found in file.")
@@ -56,10 +75,30 @@ class SentimentModel:
             exit(1)
 
     def _calculate_reference_vectors(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Calculates reference vectors for positive and negative sentiment.
+        
+        Mathematical Concept: LINEAR COMBINATION
+        Reference vectors are computed as the arithmetic mean of seed word vectors.
+        This creates a centroid vector that represents the semantic direction of
+        sentiment. For seed words w1, w2, ..., wn with vectors v1, v2, ..., vn:
+        
+        s = (1/n) * (v1 + v2 + ... + vn)
+        
+        This linear combination gives us a reference point in vector space that
+        represents the "average" semantic meaning of positive/negative sentiment.
+        
+        Returns:
+            Tuple of (s_pos, s_neg) - positive and negative reference vectors
+        """
         POSITIVE_SEED_WORDS = ['good', 'great', 'love', 'excellent', 'best', 'awesome', 'happy']
         NEGATIVE_SEED_WORDS = ['bad', 'terrible', 'hate', 'worst', 'awful', 'poor', 'sad']
         
         def get_average_vector(words: List[str]) -> np.ndarray:
+            """
+            Computes the average vector from a list of seed words.
+            This is a weighted linear combination with equal weights (1/n).
+            """
             vector_sum = np.zeros(self.embedding_dim)
             word_count = 0
             for word in words:
@@ -78,14 +117,32 @@ class SentimentModel:
         return s_pos, s_neg
 
     def clean_text(self, text: str) -> List[str]:
+        """Preprocesses text by lowercasing and removing punctuation."""
         if not isinstance(text, str):
             return []
         text = text.lower()
-        text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+        text = re.sub(r'[^\w\s]', '', text)
         words = text.split()
         return words
 
     def create_document_vector(self, words: List[str]) -> np.ndarray:
+        """
+        Creates a document vector by combining word vectors.
+        
+        Mathematical Concept: LINEAR COMBINATION
+        The document vector d is computed as the average of all word vectors
+        in the document. For words w1, w2, ..., wn with vectors v1, v2, ..., vn:
+        
+        d = (1/n) * (v1 + v2 + ... + vn)
+        
+        This represents the document as a single point in the vector space,
+        capturing the aggregate semantic meaning of all words in the document.
+        The averaging operation ensures documents of different lengths are
+        comparable by normalizing the contribution of each word.
+        
+        Returns:
+            Document vector d in the same embedding space as word vectors
+        """
         d = np.zeros(self.embedding_dim)
         word_count = 0
         for word in words:
@@ -98,6 +155,29 @@ class SentimentModel:
         return d
 
     def cosine_similarity(self, v1: np.ndarray, v2: np.ndarray) -> float:
+        """
+        Calculates the cosine similarity between two vectors.
+        
+        Mathematical Concepts:
+        1. INNER PRODUCT (DOT PRODUCT): v1 · v2 = Σ(v1_i * v2_i)
+           Measures the alignment between two vectors' directions.
+        
+        2. VECTOR NORM: ||v|| = √(v · v) = √(Σ(v_i²))
+           Measures the magnitude (length) of a vector in the vector space.
+        
+        3. COSINE SIMILARITY: cos(θ) = (v1 · v2) / (||v1|| * ||v2||)
+           Measures the cosine of the angle between two vectors.
+           - Returns 1 if vectors point in the same direction (max similarity)
+           - Returns 0 if vectors are orthogonal (no similarity)
+           - Returns -1 if vectors point in opposite directions (max dissimilarity)
+        
+        Cosine similarity is preferred over dot product for semantic similarity
+        because it is normalized by vector magnitude, making it scale-invariant.
+        This allows comparison of vectors regardless of their individual magnitudes.
+        
+        Returns:
+            Cosine similarity value in range [-1, 1]
+        """
         dot_product = np.dot(v1, v2)
         norm_v1 = np.linalg.norm(v1)
         norm_v2 = np.linalg.norm(v2)
@@ -108,6 +188,32 @@ class SentimentModel:
         return dot_product / (norm_v1 * norm_v2)
 
     def classify_sentiment(self, d: np.ndarray) -> Tuple[str, float, float]:
+        """
+        Classifies the sentiment of a document vector.
+        
+        Mathematical Concepts:
+        1. VECTOR NORM: Checks if document vector is zero vector (||d|| = 0)
+           Zero vectors cannot be meaningfully compared via cosine similarity.
+        
+        2. COSINE SIMILARITY: Compares document vector d with reference vectors
+           s_pos and s_neg to determine semantic alignment.
+           - Higher similarity to s_pos indicates positive sentiment
+           - Higher similarity to s_neg indicates negative sentiment
+           - Similar similarities indicate neutral sentiment
+        
+        3. DECISION BOUNDARY: Uses threshold τ (NEUTRALITY_THRESHOLD) to create
+           a margin between positive and negative classifications. This prevents
+           documents with very similar positive/negative scores from being
+           misclassified due to noise.
+        
+        Classification rule:
+        - Positive if: sim(d, s_pos) > sim(d, s_neg) + τ
+        - Negative if: sim(d, s_neg) > sim(d, s_pos) + τ
+        - Neutral otherwise
+        
+        Returns:
+            Tuple of (sentiment_label, similarity_to_positive, similarity_to_negative)
+        """
         if np.linalg.norm(d) == 0:
             return "Neutral", 0.0, 0.0
             
@@ -122,6 +228,27 @@ class SentimentModel:
             return "Neutral", sim_pos, sim_neg
 
     def calculate_wsi(self, counts: Dict[str, int]) -> Tuple[float, int]:
+        """
+        Calculates the Website Satisfaction Index (WSI).
+        
+        Mathematical Concept: LINEAR COMBINATION
+        WSI is computed as a weighted average of sentiment counts:
+        
+        WSI = ((count_pos * 1) + (count_neg * -1)) / count_total * 100
+        
+        This is a linear combination where:
+        - Positive comments contribute +1
+        - Negative comments contribute -1
+        - Neutral comments contribute 0 (not included in numerator)
+        
+        The result is normalized by total count and scaled to [-100, 100] range:
+        - +100 indicates all comments are positive
+        - -100 indicates all comments are negative
+        - 0 indicates balanced sentiment or all neutral
+        
+        Returns:
+            Tuple of (WSI score, total comment count)
+        """
         count_pos = counts.get('Positive', 0)
         count_neu = counts.get('Neutral', 0)
         count_neg = counts.get('Negative', 0)
@@ -137,7 +264,6 @@ class SentimentModel:
     def get_available_sites(self) -> List[str]:
         """Reads the CSV and returns a list of unique website IDs."""
         try:
-            # FIX: Tell pandas to read empty strings as "" not NaN
             df = pd.read_csv(COMMENTS_FILE, keep_default_na=False)
             return sorted(df['Website_ID'].unique())
         except FileNotFoundError:
@@ -148,11 +274,20 @@ class SentimentModel:
 
     def get_website_analysis(self, target_site_id: str) -> Dict:
         """
-        Analyzes a site and returns a dictionary of results,
-        including the text content for a summary file.
+        Analyzes all comments for a website and returns comprehensive results.
+        
+        Processing pipeline:
+        1. Load comments from CSV for the target website
+        2. For each comment:
+           a. Clean and tokenize text
+           b. Create document vector (linear combination of word vectors)
+           c. Classify sentiment using cosine similarity to reference vectors
+        3. Calculate WSI score (linear combination of sentiment counts)
+        
+        Returns:
+            Dictionary containing WSI score, counts, labeled dataframe, and summary text
         """
         try:
-            # FIX: Tell pandas to read empty strings as "" not NaN
             df = pd.read_csv(COMMENTS_FILE, keep_default_na=False)
         except FileNotFoundError:
             return {"error": f"Comments file not found: {COMMENTS_FILE}"}
@@ -160,10 +295,6 @@ class SentimentModel:
             return {"error": f"Error reading CSV: {e}"}
 
         df_site = df[df['Website_ID'] == target_site_id].copy()
-
-        # --- FIX ---
-        # Filter out any rows that have an empty string for the comment.
-        # This stops the blank "ghost" comment from being analyzed.
         df_site = df_site[df_site['User_Comment'] != ""]
 
         if df_site.empty:
@@ -183,10 +314,6 @@ class SentimentModel:
         sentiment_counts = df_site['Sentiment'].value_counts().to_dict()
         wsi, total_comments = self.calculate_wsi(sentiment_counts)
         
-        # --- MODIFICATION ---
-        # Instead of saving a file, just prepare the content
-        
-        # Build the new key-value string format
         summary_content = (
             f"Website ID: {target_site_id}\n"
             f"WSI: {wsi:.2f}\n"
@@ -196,34 +323,25 @@ class SentimentModel:
             f"Negative Comments: {sentiment_counts.get('Negative', 0)}\n"
         )
         
-        # --- END MODIFICATION ---
-        
-        # Return a structured dictionary
         return {
             "wsi": wsi,
             "total_comments": total_comments,
             "counts": sentiment_counts,
             "labeled_dataframe": df_site,
-            "summary_content": summary_content  # <-- Pass the content back
+            "summary_content": summary_content
         }
 
     def add_comment_to_csv(self, website_id: str, user_comment: str) -> str:
-        """
-        Appends a new comment to the CSV file.
-        """
+        """Appends a new comment to the CSV file."""
         if not website_id:
             return "Error: Please provide a Website ID."
 
-        # Let pandas handle the quoting by NOT adding them manually.
         new_data = {'Website_ID': [website_id], 'User_Comment': [user_comment]}
-        
         new_df = pd.DataFrame(new_data)
 
         try:
             file_exists = os.path.isfile(COMMENTS_FILE)
-            
             with open(COMMENTS_FILE, 'a', newline='', encoding='utf-8') as f:
-                # Let pandas use its default quoting (QUOTE_MINIMAL)
                 new_df.to_csv(
                     f,
                     header=not file_exists, 
@@ -251,14 +369,12 @@ class SentimentModel:
         except Exception as e:
             return f"Error checking existing sites: {e}"
 
-        # Add the site with a blank comment
         status = self.add_comment_to_csv(website_id, "")
         if "Successfully" in status:
              return f"Successfully added website '{website_id}'."
         else:
             return status
 
-    # --- BATCH UPLOAD FUNCTION ---
     def batch_add_comments_from_file(self, website_id: str, file_path: str) -> str:
         """
         Reads a .txt file line by line and adds each line as a new comment
@@ -280,7 +396,6 @@ class SentimentModel:
         if not comments:
             return f"Error: No valid comments found in '{os.path.basename(file_path)}'."
             
-        # Let pandas handle the quoting by NOT adding them manually.
         website_ids = [website_id] * len(comments)
         df_new = pd.DataFrame({
             'Website_ID': website_ids,
@@ -290,7 +405,6 @@ class SentimentModel:
         try:
             file_exists = os.path.isfile(COMMENTS_FILE)
             with open(COMMENTS_FILE, 'a', newline='', encoding='utf-8') as f:
-                # Let pandas use its default quoting (QUOTE_MINIMAL)
                 df_new.to_csv(
                     f,
                     header=not file_exists,
