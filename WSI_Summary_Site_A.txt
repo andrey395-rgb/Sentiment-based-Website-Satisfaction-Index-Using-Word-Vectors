@@ -1,0 +1,6 @@
+Website ID: Site_A
+WSI: 21.88
+Total Comments: 32
+Positive Comments: 18
+Neutral Comments: 3
+Negative Comments: 11

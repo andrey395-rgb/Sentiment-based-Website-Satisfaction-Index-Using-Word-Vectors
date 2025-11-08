@@ -148,8 +148,7 @@ class SentimentModel:
 
     def get_website_analysis(self, target_site_id: str) -> Dict:
         """
-        Analyzes a site and returns a dictionary of results
-        instead of printing to console.
+        Analyzes a site, saves a summary file, and returns a dictionary of results.
         """
         try:
             # FIX: Tell pandas to read empty strings as "" not NaN
@@ -184,45 +183,63 @@ class SentimentModel:
         sentiment_counts = df_site['Sentiment'].value_counts().to_dict()
         wsi, total_comments = self.calculate_wsi(sentiment_counts)
         
+        # --- NEW: Save Summary in .txt format ---
+        
+        # Change file extension to .txt
+        summary_filename = f"WSI_Summary_{target_site_id}.txt"
+        
+        # Build the new key-value string format
+        summary_content = (
+            f"Website ID: {target_site_id}\n"
+            f"WSI: {wsi:.2f}\n"
+            f"Total Comments: {total_comments}\n"
+            f"Positive Comments: {sentiment_counts.get('Positive', 0)}\n"
+            f"Neutral Comments: {sentiment_counts.get('Neutral', 0)}\n"
+            f"Negative Comments: {sentiment_counts.get('Negative', 0)}\n"
+        )
+        
+        try:
+            # Write the string directly to the file
+            with open(summary_filename, 'w', encoding='utf-8') as f:
+                f.write(summary_content)
+            summary_saved = True
+        except Exception as e:
+            print(f"Error saving summary file: {e}")
+            summary_saved = False
+        # --- END NEW ---
+        
         # Return a structured dictionary
         return {
             "wsi": wsi,
             "total_comments": total_comments,
             "counts": sentiment_counts,
-            "labeled_dataframe": df_site
+            "labeled_dataframe": df_site,
+            "summary_file_path": summary_filename if summary_saved else None 
         }
 
     def add_comment_to_csv(self, website_id: str, user_comment: str) -> str:
         """
         Appends a new comment to the CSV file.
-        This is modified from your original 'add_comment' function.
         """
-        # Allow empty comments, but not an empty site ID
         if not website_id:
             return "Error: Please provide a Website ID."
 
-        # --- FIX for pandas escaping error ---
         # Let pandas handle the quoting by NOT adding them manually.
         new_data = {'Website_ID': [website_id], 'User_Comment': [user_comment]}
-        # --- END FIX ---
         
         new_df = pd.DataFrame(new_data)
 
         try:
-            # Check if file exists to determine if we need to write a header
             file_exists = os.path.isfile(COMMENTS_FILE)
             
             with open(COMMENTS_FILE, 'a', newline='', encoding='utf-8') as f:
-                # --- FIX for pandas escaping error ---
                 # Let pandas use its default quoting (QUOTE_MINIMAL)
-                # which will correctly add quotes only when needed (e.g., if a comment has a comma)
                 new_df.to_csv(
                     f,
-                    header=not file_exists, # Write header only if file is new
+                    header=not file_exists, 
                     index=False,
                     quoting=csv.QUOTE_MINIMAL 
                 )
-                # --- END FIX ---
             return f"Successfully added comment for '{website_id}'."
         except Exception as e:
             return f"Error saving comment: {e}"
@@ -235,14 +252,12 @@ class SentimentModel:
         if not website_id:
             return "Error: Please provide a Website ID."
             
-        # Check if site already exists
         try:
-            # FIX: Tell pandas to read empty strings as "" not NaN
             df = pd.read_csv(COMMENTS_FILE, keep_default_na=False)
             if website_id in df['Website_ID'].unique():
                 return f"Error: Website '{website_id}' already exists."
         except FileNotFoundError:
-            pass # File doesn't exist, so site doesn't exist. That's fine.
+            pass 
         except Exception as e:
             return f"Error checking existing sites: {e}"
 
@@ -262,7 +277,6 @@ class SentimentModel:
         if not website_id:
             return "Error: Please provide a Website ID."
 
-        # 1. Read all lines from the .txt file
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
@@ -271,35 +285,28 @@ class SentimentModel:
         except Exception as e:
             return f"Error reading file: {e}"
             
-        # 2. Clean lines: remove whitespace and skip empty ones
         comments = [line.strip() for line in lines if line.strip()]
         
         if not comments:
             return f"Error: No valid comments found in '{os.path.basename(file_path)}'."
             
-        # 3. Prepare data for DataFrame
-        # --- FIX for pandas escaping error ---
         # Let pandas handle the quoting by NOT adding them manually.
         website_ids = [website_id] * len(comments)
         df_new = pd.DataFrame({
             'Website_ID': website_ids,
             'User_Comment': comments
         })
-        # --- END FIX ---
 
-        # 4. Append the entire DataFrame to the CSV in one go
         try:
             file_exists = os.path.isfile(COMMENTS_FILE)
             with open(COMMENTS_FILE, 'a', newline='', encoding='utf-8') as f:
-                # --- FIX for pandas escaping error ---
                 # Let pandas use its default quoting (QUOTE_MINIMAL)
-                df_new.to_csv( # <--- This line was changed from new_df to df_new
+                df_new.to_csv(
                     f,
-                    header=not file_exists, # Write header only if file is new
+                    header=not file_exists,
                     index=False,
                     quoting=csv.QUOTE_MINIMAL
                 )
-                # --- END FIX ---
             
             return f"Successfully added {len(comments)} comments from '{os.path.basename(file_path)}'."
             

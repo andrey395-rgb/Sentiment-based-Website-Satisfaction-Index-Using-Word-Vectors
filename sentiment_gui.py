@@ -56,15 +56,13 @@ class SentimentApp(TkinterDnD.Tk):
         self.notebook = ttk.Notebook(self)
         
         self.frame_analyze = ttk.Frame(self.notebook, padding=15)
-        self.frame_add = ttk.Frame(self.notebook, padding=15)
         self.frame_manage = ttk.Frame(self.notebook, padding=15)
-        # --- NEW: Create a new frame for batch upload ---
+        self.frame_add = ttk.Frame(self.notebook, padding=15)
         self.frame_batch = ttk.Frame(self.notebook, padding=15)
         
         self.notebook.add(self.frame_analyze, text='Analyze Website')
         self.notebook.add(self.frame_manage, text='Add New Site')
-        self.notebook.add(self.frame_add, text='Add Single Comment') # Renamed slightly
-        # --- NEW: Add the new tab ---
+        self.notebook.add(self.frame_add, text='Add Single Comment')
         self.notebook.add(self.frame_batch, text='Batch Upload')
         
         self.notebook.pack(expand=True, fill='both')
@@ -72,13 +70,13 @@ class SentimentApp(TkinterDnD.Tk):
         # --- Populate the "Analyze Website" Tab ---
         self.create_analyze_tab()
         
-        # --- Populate the "Add Comment" Tab ---
-        self.create_add_tab()
-        
         # --- Populate the "Add New Site" Tab ---
         self.create_manage_tab() 
         
-        # --- NEW: Populate the "Batch Upload" Tab ---
+        # --- Populate the "Add Comment" Tab ---
+        self.create_add_tab()
+        
+        # --- Populate the "Batch Upload" Tab ---
         self.create_batch_tab()
         
         # --- Load initial data ---
@@ -112,9 +110,20 @@ class SentimentApp(TkinterDnD.Tk):
         )
         btn_analyze.grid(row=2, column=1, pady=10)
         
+        # --- NEW: Status Label ---
+        self.analyze_status_var = tk.StringVar()
+        lbl_analyze_status = ttk.Label(
+            self.frame_analyze,
+            textvariable=self.analyze_status_var,
+            font=("Arial", 10, "italic"),
+            background='#f0f0f0'
+        )
+        lbl_analyze_status.grid(row=3, column=1, pady=(0, 10))
+        # --- END NEW ---
+        
         # Results Text Area
         lbl_results = ttk.Label(self.frame_analyze, text="Results:")
-        lbl_results.grid(row=3, column=1, pady=(10, 5), sticky='sw')
+        lbl_results.grid(row=4, column=1, pady=(10, 5), sticky='sw')
         
         self.text_results = scrolledtext.ScrolledText(
             self.frame_analyze, 
@@ -123,11 +132,50 @@ class SentimentApp(TkinterDnD.Tk):
             width=80, 
             font=("Consolas", 10)
         )
-        self.text_results.grid(row=4, column=1, sticky='nsew')
+        self.text_results.grid(row=5, column=1, sticky='nsew')
         
-        self.frame_analyze.rowconfigure(4, weight=1)
+        # Configure the row containing the text area to expand vertically
+        self.frame_analyze.rowconfigure(5, weight=1)
 
+    # --- FIX: Renamed function to create_manage_tab ---
+    def create_manage_tab(self):
+        """Creates the content for the 'Add New Site' tab."""
+        # Configure grid for padding
+        self.frame_manage.columnconfigure(0, weight=1)
+        self.frame_manage.columnconfigure(1, weight=0)
+        self.frame_manage.columnconfigure(2, weight=1)
+
+        # Label
+        lbl_new_site = ttk.Label(self.frame_manage, text="Enter New Website ID:")
+        lbl_new_site.grid(row=0, column=1, padx=5, pady=(10, 5), sticky='sw')
+
+        # Entry
+        self.new_site_var = tk.StringVar()
+        entry_new_site = ttk.Entry(self.frame_manage, textvariable=self.new_site_var, width=60, font=("Arial", 11))
+        entry_new_site.grid(row=1, column=1, padx=5, pady=5, sticky='ew')
+        
+        # Button
+        btn_add_site = ttk.Button(
+            self.frame_manage, 
+            text="Add New Website", 
+            command=self.on_add_website_click
+        )
+        # --- FIX: Changed btn_analyze to btn_add_site ---
+        btn_add_site.grid(row=2, column=1, pady=20)
+        
+        # Status Label
+        self.manage_status_var = tk.StringVar()
+        lbl_status = ttk.Label(
+            self.frame_manage, 
+            textvariable=self.manage_status_var, 
+            font=("Arial", 10, "italic"),
+            background='#f0f0f0'
+        )
+        lbl_status.grid(row=3, column=1, pady=10)
+
+    # --- FIX: Re-added the correct create_add_tab ---
     def create_add_tab(self):
+        """Creates the content for the 'Add Single Comment' tab."""
         # Configure grid for resizing
         self.frame_add.columnconfigure(1, weight=1)
         self.frame_add.rowconfigure(1, weight=1) # Make text box expandable
@@ -174,50 +222,14 @@ class SentimentApp(TkinterDnD.Tk):
             background='#f0f0f0'
         )
         lbl_status.grid(row=3, column=0, columnspan=2, pady=10)
-        
-        # --- All batch upload UI has been removed from this tab ---
 
-    def create_manage_tab(self):
-        """Creates the content for the 'Add New Site' tab."""
-        # Configure grid for padding
-        self.frame_manage.columnconfigure(0, weight=1)
-        self.frame_manage.columnconfigure(1, weight=0)
-        self.frame_manage.columnconfigure(2, weight=1)
-
-        # Label
-        lbl_new_site = ttk.Label(self.frame_manage, text="Enter New Website ID:")
-        lbl_new_site.grid(row=0, column=1, padx=5, pady=(10, 5), sticky='sw')
-
-        # Entry
-        self.new_site_var = tk.StringVar()
-        entry_new_site = ttk.Entry(self.frame_manage, textvariable=self.new_site_var, width=60, font=("Arial", 11))
-        entry_new_site.grid(row=1, column=1, padx=5, pady=5, sticky='ew')
-        
-        # Button
-        btn_add_site = ttk.Button(
-            self.frame_manage, 
-            text="Add New Website", 
-            command=self.on_add_website_click
-        )
-        btn_add_site.grid(row=2, column=1, padx=5, pady=20)
-        
-        # Status Label
-        self.manage_status_var = tk.StringVar()
-        lbl_status = ttk.Label(
-            self.frame_manage, 
-            textvariable=self.manage_status_var, 
-            font=("Arial", 10, "italic"),
-            background='#f0f0f0'
-        )
-        lbl_status.grid(row=3, column=1, pady=10)
-
-    # --- NEW: Function to create the batch upload tab ---
+    # --- FIX: Renamed function to create_batch_tab ---
     def create_batch_tab(self):
         """Creates the content for the 'Batch Upload' tab."""
         # Configure grid for centering and resizing
-        self.frame_batch.columnconfigure(0, weight=1) # Left padding
-        self.frame_batch.columnconfigure(1, weight=1) # Content (set weight to 1 to allow entry to expand)
-        self.frame_batch.columnconfigure(2, weight=1) # Right padding
+        self.frame_batch.columnconfigure(0, weight=1)
+        self.frame_batch.columnconfigure(1, weight=1)
+        self.frame_batch.columnconfigure(2, weight=1)
         self.frame_batch.rowconfigure(4, weight=1) # Make drop zone expandable
 
         # 1. Site ID Label
@@ -234,11 +246,11 @@ class SentimentApp(TkinterDnD.Tk):
         )
         self.combo_batch.grid(row=1, column=1, padx=5, pady=5, sticky='ew')
 
-        # 3. Drop Zone Label
+        # 3. File Selection Label
         lbl_batch_drop = ttk.Label(self.frame_batch, text="2. Select a .txt file:")
         lbl_batch_drop.grid(row=2, column=1, padx=5, pady=(20, 5), sticky='sw')
 
-        # --- NEW: Frame for Browse Button and Entry Box ---
+        # 4. Frame for Browse Button and Entry Box
         browse_frame = ttk.Frame(self.frame_batch)
         browse_frame.grid(row=3, column=1, padx=5, pady=5, sticky='ew')
         browse_frame.columnconfigure(0, weight=1) # Make entry expand
@@ -257,9 +269,8 @@ class SentimentApp(TkinterDnD.Tk):
             command=self.on_browse_file
         )
         btn_browse.grid(row=0, column=1, padx=(5, 0))
-        # --- END NEW FRAME ---
 
-        # 4. Drop Zone
+        # 5. Drop Zone
         self.drop_target = tk.Label(
             self.frame_batch, 
             text="OR Drag and Drop file here",
@@ -272,20 +283,19 @@ class SentimentApp(TkinterDnD.Tk):
         )
         self.drop_target.grid(row=4, column=1, padx=5, pady=5, sticky='nsew')
         
-        # 5. Register the drop zone
+        # 6. Register the drop zone
         self.drop_target.drop_target_register(TkinterDnD.DND_FILES)
         self.drop_target.dnd_bind('<<Drop>>', self.on_file_drop)
         
-        # --- NEW: Submit Button ---
+        # 7. Submit Button
         btn_submit_batch = ttk.Button(
             self.frame_batch,
             text="Submit Batch File",
             command=self.on_submit_batch
         )
         btn_submit_batch.grid(row=5, column=1, padx=5, pady=15)
-        # --- END NEW BUTTON ---
         
-        # 6. Status Label (Now row 6)
+        # 8. Status Label (Now row 6)
         self.batch_status_var = tk.StringVar()
         lbl_batch_status = ttk.Label(
             self.frame_batch, 
@@ -301,7 +311,7 @@ class SentimentApp(TkinterDnD.Tk):
         
         self.combo_analyze['values'] = sites
         self.combo_add['values'] = sites
-        self.combo_batch['values'] = sites # --- NEW: Update batch dropdown
+        self.combo_batch['values'] = sites # Update batch dropdown
         
         # Set a default selection if possible
         if sites:
@@ -310,7 +320,7 @@ class SentimentApp(TkinterDnD.Tk):
                 self.analyze_site_var.set(sites[0])
             if not self.add_site_var.get() in sites:
                 self.add_site_var.set(sites[0])
-            if not self.batch_site_var.get() in sites: # --- NEW: Set batch default
+            if not self.batch_site_var.get() in sites: # Set batch default
                 self.batch_site_var.set(sites[0])
 
     def on_analyze_click(self):
@@ -320,6 +330,10 @@ class SentimentApp(TkinterDnD.Tk):
             messagebox.showwarning("No Site", "Please select a website to analyze.")
             return
 
+        # Clear status
+        self.analyze_status_var.set("") 
+        
+        # 1. Clear previous results
         self.text_results.delete('1.0', tk.END)
         self.text_results.insert('1.0', f"Analyzing '{site_id}'...")
         self.update_idletasks()
@@ -330,7 +344,15 @@ class SentimentApp(TkinterDnD.Tk):
 
         if "error" in results:
             self.text_results.insert('1.0', f"Error: {results['error']}")
+            # Show error status
+            self.analyze_status_var.set(f"Error: {results['error']}")
             return
+
+        # Show file save status
+        if results.get("summary_file_path"):
+            self.analyze_status_var.set(f"Summary saved to {results['summary_file_path']}")
+        else:
+            self.analyze_status_var.set("Error: Could not save summary file.")
 
         wsi = results['wsi']
         total = results['total_comments']
@@ -370,14 +392,13 @@ class SentimentApp(TkinterDnD.Tk):
             self.refresh_site_dropdowns()
             self.add_site_var.set(new_site_id)
             self.analyze_site_var.set(new_site_id)
-            self.batch_site_var.set(new_site_id) # --- NEW: Update batch dropdown
+            self.batch_site_var.set(new_site_id) 
 
     def on_add_comment_click(self):
         """Handles the 'Add Comment' button click."""
         site_id = self.add_site_var.get().strip()
         comment = self.entry_comment.get("1.0", "end-1c").strip()
         
-        # --- FIX: Check for comment *after* stripping whitespace ---
         if not site_id or not comment:
             messagebox.showwarning("Missing Info", "Please provide both a Website ID and a comment.")
             return
@@ -390,9 +411,8 @@ class SentimentApp(TkinterDnD.Tk):
             # Only refresh if the site was new
             if site_id not in self.combo_add['values']:
                 self.refresh_site_dropdowns()
-                self.add_site_var.set(site_id) # Re-set the site
+            self.add_site_var.set(site_id) # Re-set the site
             
-    # --- NEW: Browse file button handler ---
     def on_browse_file(self):
         """Opens a file dialog to select a .txt file."""
         file_path = filedialog.askopenfilename(
@@ -402,7 +422,6 @@ class SentimentApp(TkinterDnD.Tk):
         if file_path:
             self.batch_file_path.set(file_path)
 
-    # --- NEW: Submit batch button handler ---
     def on_submit_batch(self):
         """Handles the 'Submit Batch File' button click."""
         file_path = self.batch_file_path.get()
@@ -410,13 +429,13 @@ class SentimentApp(TkinterDnD.Tk):
 
     def on_file_drop(self, event):
         """
+File `sentiment_gui.py` updated.
         Handles the event when a file is dropped onto the drop zone.
         """
         file_path = event.data.strip('{}')
         self.batch_file_path.set(file_path) # Set the file path in the entry
         self.process_batch_file(file_path) # Call helper
 
-    # --- NEW: Helper function to process the batch file ---
     def process_batch_file(self, file_path: str):
         """
         Contains the core logic for processing a batch file,
